@@ -396,7 +396,7 @@
 							address1: addressData
 						});
 				else
-					return new Address(addressData);
+					return new Address(convertSelectors(addressData));
 			},
 			verify: function (input, callback) {
 				var addr = instance.makeAddress(input); // Below means, force re-verify even if accepted/unchanged.
@@ -1232,28 +1232,8 @@
 				if (!address.country && config.target.indexOf("US") < 0)
 					continue;
 
-				// Convert selectors into actual DOM references
-				for (var fieldType in address) {
-					if (fieldType != "id") {
-						if (!arrayContains(acceptableFields, fieldType)) { // Make sure the field name is allowed
-							if (config.debug)
-								console.log("NOTICE: Field named " + fieldType + " is not allowed. Skipping...");
-							delete address[fieldType];
-							continue;
-						}
-						var matched = $(address[fieldType], context);
-						if (matched.length == 0) { // Don't try to map an element that couldn't be matched or found at all
-							if (config.debug)
-								console.log("NOTICE: No matches found for selector " + address[fieldType] + ". Skipping...");
-							delete address[fieldType];
-						} else if (matched.parents('form').length == 0) { // We should only map elements inside a <form> tag; otherwise we can't bind to submit handlers later
-							if (config.debug)
-								console.log("NOTICE: Element with selector \"" + address[fieldType] + "\" is not inside a <form> tag. Skipping...");
-							delete address[fieldType];
-						} else
-							address[fieldType] = matched[0];
-					}
-				}
+				convertSelectors(address, context);
+
 				if (config.target.indexOf("INTERNATIONAL") >= 0) {
 					if (!((address.country && address.freeform) || (address.country && address.address1 && address.postal_code) || (address.country && address.address1 && address.locality && address.administrative_area))) {
 						if (config.debug)
@@ -2304,6 +2284,7 @@
 			var stateText;
 			if (fields.administrative_area) {
 				stateText = fields.administrative_area.value;
+
 				if (fields.administrative_area.dom !== undefined && fields.administrative_area.dom.length !== undefined) {
 					if (fields.administrative_area.dom.selectedIndex < 1)
 						stateText = "";
@@ -3820,6 +3801,32 @@
 	/*
 	 *	MISCELLANEOUS
 	 */
+
+	function convertSelectors(address, context) {
+		// Convert address selectors into actual DOM references
+		for (var fieldType in address) {
+			if (fieldType != "id") {
+				if (!arrayContains(acceptableFields, fieldType)) { // Make sure the field name is allowed
+					if (config.debug)
+						console.log("NOTICE: Field named " + fieldType + " is not allowed. Skipping...");
+					delete address[fieldType];
+					continue;
+				}
+				var matched = $(address[fieldType], context);
+				if (matched.length == 0) { // Don't try to map an element that couldn't be matched or found at all
+					if (config.debug)
+						console.log("NOTICE: No matches found for selector " + address[fieldType] + ". Skipping...");
+					delete address[fieldType];
+				} else if (matched.parents('form').length == 0) { // We should only map elements inside a <form> tag; otherwise we can't bind to submit handlers later
+					if (config.debug)
+						console.log("NOTICE: Element with selector \"" + address[fieldType] + "\" is not inside a <form> tag. Skipping...");
+					delete address[fieldType];
+				} else
+					address[fieldType] = matched[0];
+			}
+		}
+		return address;
+	}
 
 	function arrayContains(array, subject) {
 		// See if an array contains a particular value
